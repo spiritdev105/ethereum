@@ -26,13 +26,13 @@ limitations under the License.
 
 ## Learn More
 
-**To learn about Corporate training events, options and special pricing please contact:**
+**To learn about Corporate training events,  open enrollment live training sessions and on-demand learning options please contact us:**
 
-William Kennedy  
 ArdanLabs (www.ardanlabs.com)  
-bill@ardanlabs.com  
+hello@ardanlabs.com
 
-[Class Schedule](https://www.eventbrite.com/o/ardan-labs-7092394651)
+To attend any of our high-performance tranings check out this link:  
+https://www.ardanlabs.com/training/ 
 
 ## Examples
 

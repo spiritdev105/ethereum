@@ -36,7 +36,7 @@ bill@ardanlabs.com
 
 ## Examples
 
-To see example for using these API's check out these two projects.
+**To see example for using these API's check out these two projects.**
 
 [Ultimate Go: Smart Contract](https://github.com/ardanlabs/smartcontract)  
 This project provides material to help you learn the basics of writing, debuging, and maintaining Ethereum smart contracts. This repository has several smart contracts of increasing complexity to showcase different aspects of smart contract development.
@@ -44,7 +44,7 @@ This project provides material to help you learn the basics of writing, debuging
 [Ultimate Go: Liar's Dice](https://github.com/ardanlabs/liarsdice)  
 This project implements a game of Liar's Dice where a crypto wallet is used for authentication and a smart contract is used to maintain the bank. Once a player is authenticated, they bet money for each game played and that money comes from their crypto wallet.
 
-For advanced general blockchain knowledge check out this project.
+**For advanced general blockchain knowledge check out this project.**
 
 [Ultimate Go: Advanced Engineering](https://github.com/ardanlabs/blockchain)  
 This project implements a semantically correct blockchain in Go. The implementation of the Ardan blockchain takes inspiration from both Bitcoin and Ethereum. This does not incorporate any smart contract development, but is good for advanced learning.

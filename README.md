@@ -4,7 +4,7 @@
 [![go.mod Go version](https://img.shields.io/github/go-mod/go-version/ardanlabs/ethereum)](https://github.com/ardanlabs/ethereum)
 
 Copyright 2022, Ardan Labs  
-info@ardanlabs.com
+hello@ardanlabs.com
 
 Ethereum provides higher level Go API's for writing applications and smart contracts on the Ethereum blockchain.
 

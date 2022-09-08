@@ -8,16 +8,6 @@ info@ardanlabs.com
 
 Ethereum provides higher level Go API's for writing applications and smart contracts on the Ethereum blockchain.
 
-## Learn More
-
-**To learn about Corporate training events, options and special pricing please contact:**
-
-William Kennedy  
-ArdanLabs (www.ardanlabs.com)  
-bill@ardanlabs.com  
-
-[Class Schedule](https://www.eventbrite.com/o/ardan-labs-7092394651)
-
 ## Licensing
 
 ```
@@ -33,6 +23,16 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ```
+
+## Learn More
+
+**To learn about Corporate training events, options and special pricing please contact:**
+
+William Kennedy  
+ArdanLabs (www.ardanlabs.com)  
+bill@ardanlabs.com  
+
+[Class Schedule](https://www.eventbrite.com/o/ardan-labs-7092394651)
 
 ## Examples
 

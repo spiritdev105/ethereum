@@ -146,7 +146,7 @@ func ValueToBytes(value any) ([]byte, error) {
 func ToSignatureValues(sig []byte) (v uint8, r, s [32]byte) {
 	copy(r[:], sig[:32])
 	copy(s[:], sig[32:64])
-	v = uint8(sig[64]) + ethID
+	v = uint8(sig[64])
 
 	return v, r, s
 }

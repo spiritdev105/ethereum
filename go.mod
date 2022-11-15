@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/DeOne4eg/eth-unit-converter v0.2.0
-	github.com/bazelbuild/tools_jvm_autodeps v0.0.0-20180917073602-62694dd50b91
 	github.com/ethereum/go-ethereum v1.10.23
 )
 

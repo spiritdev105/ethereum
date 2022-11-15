@@ -4,6 +4,7 @@
 package ethtest
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/rand"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -37,17 +39,15 @@ func NewSimulatedBackend(numAccounts int) (*SimulatedBackend, error) {
 			return nil, fmt.Errorf("unable to generate private key: %w", err)
 		}
 
-		keys = append(keys, privateKey)
+		keys[i] = privateKey
 
 		alloc[crypto.PubkeyToAddress(privateKey.PublicKey)] = core.GenesisAccount{
-			Balance: big.NewInt(0).Mul(big.NewInt(100_000), big.NewInt(1e+18)),
+			Balance: big.NewInt(0).Mul(big.NewInt(100), big.NewInt(1e18)),
 		}
 	}
 
-	simulatedBackend := backends.NewSimulatedBackend(alloc, 3e7)
-
 	sb := SimulatedBackend{
-		SimulatedBackend: simulatedBackend,
+		SimulatedBackend: backends.NewSimulatedBackend(alloc, 3e7),
 		AutoCommit:       true,
 		PrivateKeys:      keys,
 	}
@@ -56,6 +56,20 @@ func NewSimulatedBackend(numAccounts int) (*SimulatedBackend, error) {
 	sb.Commit()
 
 	return &sb, nil
+}
+
+// SendTransaction functions pipes its parameters to the embedded backend and
+// also calls Commit() if sb.AutoCommit==true.
+func (sb *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	if err := sb.SimulatedBackend.SendTransaction(ctx, tx); err != nil {
+		return err
+	}
+
+	if sb.AutoCommit {
+		sb.Commit()
+	}
+
+	return nil
 }
 
 // NewTxOpts returns a TransactOpts for the account.

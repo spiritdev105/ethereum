@@ -57,11 +57,12 @@ func NewConverter(abiMetaData string, coinMarketCapKey string) (*Converter, erro
 
 // NewDefaultConverter can be used if the API is failing to set reasonable
 // defaults. Also good for tests.
-func NewDefaultConverter() *Converter {
+func NewDefaultConverter(abiMetaData string) *Converter {
 	oneGWeiToUSD := big.NewFloat(0).SetPrec(1024).Mul(defaultOneETHToUSD, big.NewFloat(0.000000001))
 	oneUSDToGWei := big.NewFloat(0).SetPrec(1024).Mul(defaultOneUSDToETH, big.NewFloat(1000000000))
 
 	return &Converter{
+		abiMetaData:  abiMetaData,
 		oneETHToUSD:  defaultOneETHToUSD,
 		oneUSDToETH:  defaultOneUSDToETH,
 		oneGWeiToUSD: oneGWeiToUSD,

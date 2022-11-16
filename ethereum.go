@@ -80,7 +80,7 @@ func New(ctx context.Context, network string, keyFile string, passPhrase string)
 // NewSimulation provides an API for accessing an Ethereum node to perform blockchain
 // related operations against the specified simulated backend and private key
 // that was registered by the CreateSimulation function.
-func NewSimulation(simBack *backends.SimulatedBackend, pk *ecdsa.PrivateKey) *Ethereum {
+func NewSimulation(simBack *SimulatedBackend, pk *ecdsa.PrivateKey) *Ethereum {
 	return &Ethereum{
 		network:    "simulation",
 		address:    crypto.PubkeyToAddress(pk.PublicKey),

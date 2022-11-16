@@ -9,9 +9,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ardanlabs/ethereum/ethtest"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -77,23 +77,17 @@ func New(ctx context.Context, network string, keyFile string, passPhrase string)
 	return &eth, nil
 }
 
-// NewSimulation provides an API for accessing an Ethereum node simulation to
-// perform blockchain related operations.
-func NewSimulation(ctx context.Context) (*Ethereum, error) {
-	simBack, err := ethtest.NewSimulatedBackend(1)
-	if err != nil {
-		return nil, fmt.Errorf("dial network: %w", err)
-	}
-
-	eth := Ethereum{
+// NewSimulation provides an API for accessing an Ethereum node to perform blockchain
+// related operations against the specified simulated backend and private key
+// that was registered by the CreateSimulation function.
+func NewSimulation(simBack *backends.SimulatedBackend, pk *ecdsa.PrivateKey) *Ethereum {
+	return &Ethereum{
 		network:    "simulation",
-		address:    crypto.PubkeyToAddress(simBack.PrivateKeys[0].PublicKey),
-		privateKey: simBack.PrivateKeys[0],
+		address:    crypto.PubkeyToAddress(pk.PublicKey),
+		privateKey: pk,
 		chainID:    big.NewInt(1337),
 		client:     simBack,
 	}
-
-	return &eth, nil
 }
 
 // Copy creates a new client connection copying the client's settings.
@@ -109,7 +103,32 @@ func (eth *Ethereum) Copy(ctx context.Context) (*Ethereum, error) {
 
 // RawClient returns the raw ethereum client API.
 func (eth *Ethereum) RawClient() *ethclient.Client {
-	return eth.client.(*ethclient.Client)
+	client, isClient := eth.client.(*ethclient.Client)
+	if !isClient {
+		return nil
+	}
+
+	return client
+}
+
+// RawSimulation returns the raw ethereum simulated backend API.
+func (eth *Ethereum) RawSimulation() *backends.SimulatedBackend {
+	client, isSim := eth.client.(*backends.SimulatedBackend)
+	if !isSim {
+		return nil
+	}
+
+	return client
+}
+
+// ContractBackend returns the client where a contract backend is needed.
+func (eth *Ethereum) ContractBackend() bind.ContractBackend {
+	return eth.client
+}
+
+// DeployBackend returns the client where a deploy backend is needed.
+func (eth *Ethereum) DeployBackend() bind.DeployBackend {
+	return eth.client
 }
 
 // Address returns the current address calculated from the private key.

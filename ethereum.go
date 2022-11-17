@@ -14,7 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 // Set of networks supported by the smart package.
@@ -32,40 +31,32 @@ type Backend interface {
 	bind.DeployBackend
 	TransactionByHash(ctx context.Context, txHash common.Hash) (*types.Transaction, bool, error)
 	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)
+	ChainID() *big.Int
 }
 
 // Ethereum provides an API for working with smart contracts.
 type Ethereum struct {
-	backend    Backend
+	Backend
 	address    common.Address
 	privateKey *ecdsa.PrivateKey
 	chainID    *big.Int
 }
 
 // New provides an API for accessing an Ethereum node to perform blockchain
-// related operations.
-func New(backend Backend, privateKey *ecdsa.PrivateKey, chainID *big.Int) (*Ethereum, error) {
+// related operations. It required the private key you want to use for this
+// instance when accessing the node.
+func New(backend Backend, privateKey *ecdsa.PrivateKey) (*Ethereum, error) {
 	eth := Ethereum{
-		backend:    backend,
+		Backend:    backend,
 		address:    crypto.PubkeyToAddress(privateKey.PublicKey),
 		privateKey: privateKey,
-		chainID:    chainID,
+		chainID:    backend.ChainID(),
 	}
 
 	return &eth, nil
 }
 
 // =============================================================================
-
-// ContractBackend returns the client where a contract backend is needed.
-func (eth *Ethereum) ContractBackend() bind.ContractBackend {
-	return eth.backend
-}
-
-// DeployBackend returns the client where a deploy backend is needed.
-func (eth *Ethereum) DeployBackend() bind.DeployBackend {
-	return eth.backend
-}
 
 // Address returns the current address calculated from the private key.
 func (eth *Ethereum) Address() common.Address {
@@ -100,12 +91,12 @@ func (eth *Ethereum) NewCallOpts(ctx context.Context) (*bind.CallOpts, error) {
 // authorization data required to create a valid Ethereum transaction. If the
 // gasLimit is set to 0, an estimate will be made for the amount of gas needed.
 func (eth *Ethereum) NewTransactOpts(ctx context.Context, gasLimit uint64, valueGWei *big.Float) (*bind.TransactOpts, error) {
-	nonce, err := eth.backend.PendingNonceAt(ctx, eth.address)
+	nonce, err := eth.PendingNonceAt(ctx, eth.address)
 	if err != nil {
 		return nil, fmt.Errorf("retrieving next nonce: %w", err)
 	}
 
-	gasPrice, err := eth.backend.SuggestGasPrice(ctx)
+	gasPrice, err := eth.SuggestGasPrice(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("retrieving suggested gas price: %w", err)
 	}
@@ -129,7 +120,7 @@ func (eth *Ethereum) NewTransactOpts(ctx context.Context, gasLimit uint64, value
 
 // WaitMined will wait for the transaction to be minded and return a receipt.
 func (eth *Ethereum) WaitMined(ctx context.Context, tx *types.Transaction) (*types.Receipt, error) {
-	receipt, err := bind.WaitMined(ctx, eth.backend, tx)
+	receipt, err := bind.WaitMined(ctx, eth.Backend, tx)
 	if err != nil {
 		return nil, fmt.Errorf("waiting for tx to be mined: %w", err)
 	}
@@ -147,12 +138,12 @@ func (eth *Ethereum) WaitMined(ctx context.Context, tx *types.Transaction) (*typ
 // specified amount. The function will wait for the transaction to be mined
 // based on the timeout value specified in the context.
 func (eth *Ethereum) SendTransaction(ctx context.Context, address common.Address, value *big.Int, gasLimit uint64) error {
-	nonce, err := eth.backend.PendingNonceAt(ctx, eth.address)
+	nonce, err := eth.PendingNonceAt(ctx, eth.address)
 	if err != nil {
 		return fmt.Errorf("retrieving next nonce: %w", err)
 	}
 
-	gasPrice, err := eth.backend.SuggestGasPrice(ctx)
+	gasPrice, err := eth.SuggestGasPrice(ctx)
 	if err != nil {
 		return fmt.Errorf("retrieving suggested gas price: %w", err)
 	}
@@ -171,7 +162,7 @@ func (eth *Ethereum) SendTransaction(ctx context.Context, address common.Address
 		return fmt.Errorf("signing transaction: %w", err)
 	}
 
-	if err := eth.backend.SendTransaction(ctx, signedTx); err != nil {
+	if err := eth.Backend.SendTransaction(ctx, signedTx); err != nil {
 		return fmt.Errorf("signing transaction: %w", err)
 	}
 
@@ -184,16 +175,6 @@ func (eth *Ethereum) SendTransaction(ctx context.Context, address common.Address
 
 // =============================================================================
 
-// TransactionByHash returns a transaction value for the specified transaction hash.
-func (eth *Ethereum) TransactionByHash(ctx context.Context, txHash common.Hash) (*types.Transaction, bool, error) {
-	return eth.backend.TransactionByHash(ctx, txHash)
-}
-
-// TransactionReceipt returns a receipt value for the specified transaction hash.
-func (eth *Ethereum) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	return eth.backend.TransactionReceipt(ctx, txHash)
-}
-
 // Balance retrieves the current balance for the client account.
 func (eth *Ethereum) Balance(ctx context.Context) (wei *big.Int, err error) {
 	return eth.BalanceAt(ctx, eth.address)
@@ -201,7 +182,7 @@ func (eth *Ethereum) Balance(ctx context.Context) (wei *big.Int, err error) {
 
 // BalanceAt retrieves the current balance for the specified account.
 func (eth *Ethereum) BalanceAt(ctx context.Context, address common.Address) (wei *big.Int, err error) {
-	client, isClient := eth.backend.(*ethclient.Client)
+	client, isClient := eth.Backend.(*DialedBackend)
 	if !isClient {
 		return big.NewInt(0), errors.New("running simulated backend")
 	}
@@ -211,7 +192,7 @@ func (eth *Ethereum) BalanceAt(ctx context.Context, address common.Address) (wei
 
 // BaseFee calculates the base fee from the block for this receipt.
 func (eth *Ethereum) BaseFee(receipt *types.Receipt) (wei *big.Int) {
-	client, isClient := eth.backend.(*ethclient.Client)
+	client, isClient := eth.Backend.(*DialedBackend)
 	if !isClient {
 		return big.NewInt(0)
 	}
@@ -237,6 +218,6 @@ func (eth *Ethereum) extractError(ctx context.Context, tx *types.Transaction) er
 		Data:     tx.Data(),
 	}
 
-	_, err := eth.backend.CallContract(ctx, msg, nil)
+	_, err := eth.CallContract(ctx, msg, nil)
 	return err
 }

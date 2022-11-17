@@ -18,24 +18,16 @@ import (
 // DialedBackend represents a dialied connection to an ethereum node.
 type DialedBackend struct {
 	*ethclient.Client
-	PrivateKey *ecdsa.PrivateKey
-	ChainID    *big.Int
-	network    string
-	keyFile    string
-	passPhrase string
+	Network string
+	chainID *big.Int
 }
 
 // CreateDialedBackend constructs an ethereum client value for the specified
 // network and attempts to establish a connection.
-func CreateDialedBackend(ctx context.Context, network string, keyFile string, passPhrase string) (*DialedBackend, error) {
+func CreateDialedBackend(ctx context.Context, network string) (*DialedBackend, error) {
 	client, err := ethclient.Dial(network)
 	if err != nil {
 		return nil, err
-	}
-
-	privateKey, err := PrivateKeyByKeyFile(keyFile, passPhrase)
-	if err != nil {
-		return nil, fmt.Errorf("extract private key: %w", err)
 	}
 
 	chainID, err := client.ChainID(ctx)
@@ -44,15 +36,17 @@ func CreateDialedBackend(ctx context.Context, network string, keyFile string, pa
 	}
 
 	b := DialedBackend{
-		Client:     client,
-		PrivateKey: privateKey,
-		ChainID:    chainID,
-		network:    network,
-		keyFile:    keyFile,
-		passPhrase: passPhrase,
+		Client:  client,
+		Network: network,
+		chainID: chainID,
 	}
 
 	return &b, nil
+}
+
+// ChainID returns the chain id the backend is connected to.
+func (b *DialedBackend) ChainID() *big.Int {
+	return b.chainID
 }
 
 // =============================================================================
@@ -62,7 +56,7 @@ type SimulatedBackend struct {
 	*backends.SimulatedBackend
 	AutoCommit  bool
 	PrivateKeys []*ecdsa.PrivateKey
-	ChainID     *big.Int
+	chainID     *big.Int
 }
 
 // CreateSimBackend constructs a simulated backend and a set of private keys
@@ -93,10 +87,15 @@ func CreateSimBackend(numAccounts int, autoCommit bool) (*SimulatedBackend, erro
 		SimulatedBackend: client,
 		AutoCommit:       autoCommit,
 		PrivateKeys:      keys,
-		ChainID:          big.NewInt(1337),
+		chainID:          big.NewInt(1337),
 	}
 
 	return &b, nil
+}
+
+// ChainID returns the chain id the backend is connected to.
+func (b *SimulatedBackend) ChainID() *big.Int {
+	return b.chainID
 }
 
 // SendTransaction functions pipes its parameters to the embedded backend and

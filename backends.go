@@ -59,10 +59,10 @@ type SimulatedBackend struct {
 	chainID     *big.Int
 }
 
-// CreateSimBackend constructs a simulated backend and a set of private keys
+// CreateSimulatedBackend constructs a simulated backend and a set of private keys
 // registered to the backend with a balance of 100 ETH. Use these private keys
 // with the NewSimulation call to get an Ethereum API value.
-func CreateSimBackend(numAccounts int, autoCommit bool) (*SimulatedBackend, error) {
+func CreateSimulatedBackend(numAccounts int, autoCommit bool) (*SimulatedBackend, error) {
 	keys := make([]*ecdsa.PrivateKey, numAccounts)
 	alloc := make(core.GenesisAlloc)
 

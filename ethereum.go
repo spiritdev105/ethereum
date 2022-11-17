@@ -36,66 +36,23 @@ type Backend interface {
 
 // Ethereum provides an API for working with smart contracts.
 type Ethereum struct {
-	keyFile    string
-	passPhrase string
+	backend    Backend
 	address    common.Address
 	privateKey *ecdsa.PrivateKey
 	chainID    *big.Int
-	backend    Backend
 }
 
-// NewDialed provides an API for accessing an Ethereum node to perform blockchain
+// New provides an API for accessing an Ethereum node to perform blockchain
 // related operations.
-func NewDialed(ctx context.Context, backend *DialedBackend, keyFile string, passPhrase string) (*Ethereum, error) {
-	privateKey, err := PrivateKeyByKeyFile(keyFile, passPhrase)
-	if err != nil {
-		return nil, fmt.Errorf("extract private key: %w", err)
-	}
-
-	chainID, err := backend.ChainID(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("capture chain id: %w", err)
-	}
-
+func New(backend Backend, privateKey *ecdsa.PrivateKey, chainID *big.Int) (*Ethereum, error) {
 	eth := Ethereum{
-		keyFile:    keyFile,
-		passPhrase: passPhrase,
+		backend:    backend,
 		address:    crypto.PubkeyToAddress(privateKey.PublicKey),
 		privateKey: privateKey,
 		chainID:    chainID,
-		backend:    backend,
 	}
 
 	return &eth, nil
-}
-
-// NewSimulated provides an API for accessing an Ethereum node to perform blockchain
-// related operations against the specified simulated backend and private key
-// that was registered by the CreateSimulation function.
-func NewSimulated(backend *SimulatedBackend, pk *ecdsa.PrivateKey) (*Ethereum, error) {
-	return &Ethereum{
-		address:    crypto.PubkeyToAddress(pk.PublicKey),
-		privateKey: pk,
-		chainID:    big.NewInt(1337),
-		backend:    backend,
-	}, nil
-}
-
-// =============================================================================
-
-// Copy creates a new client connection copying the client's settings.
-func (eth *Ethereum) Copy(ctx context.Context) (*Ethereum, error) {
-	backend, isClient := eth.backend.(*DialedBackend)
-	if !isClient {
-		return eth, nil
-	}
-
-	newBackend, err := CreateDialedBackend(backend.network)
-	if err != nil {
-		return nil, err
-	}
-
-	return NewDialed(ctx, newBackend, eth.keyFile, eth.passPhrase)
 }
 
 // =============================================================================

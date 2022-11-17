@@ -11,7 +11,6 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind/backends"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -27,8 +26,8 @@ const (
 
 // =============================================================================
 
-// client combines all the behavior a client needs.
-type client interface {
+// Backend represents behavior for interacting with an ethereum node.
+type Backend interface {
 	bind.ContractBackend
 	bind.DeployBackend
 	TransactionByHash(ctx context.Context, txHash common.Hash) (*types.Transaction, bool, error)
@@ -37,108 +36,83 @@ type client interface {
 
 // Ethereum provides an API for working with smart contracts.
 type Ethereum struct {
-	network    string
 	keyFile    string
 	passPhrase string
 	address    common.Address
 	privateKey *ecdsa.PrivateKey
 	chainID    *big.Int
-	client     client
+	backend    Backend
 }
 
-// New provides an API for accessing an Ethereum node to perform blockchain
+// NewDialed provides an API for accessing an Ethereum node to perform blockchain
 // related operations.
-func New(ctx context.Context, network string, keyFile string, passPhrase string) (*Ethereum, error) {
-	ethClient, err := ethclient.Dial(network)
-	if err != nil {
-		return nil, fmt.Errorf("dial network: %w", err)
-	}
-
+func NewDialed(ctx context.Context, backend *DialedBackend, keyFile string, passPhrase string) (*Ethereum, error) {
 	privateKey, err := PrivateKeyByKeyFile(keyFile, passPhrase)
 	if err != nil {
 		return nil, fmt.Errorf("extract private key: %w", err)
 	}
 
-	chainID, err := ethClient.ChainID(ctx)
+	chainID, err := backend.ChainID(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("capture chain id: %w", err)
 	}
 
 	eth := Ethereum{
-		network:    network,
 		keyFile:    keyFile,
 		passPhrase: passPhrase,
 		address:    crypto.PubkeyToAddress(privateKey.PublicKey),
 		privateKey: privateKey,
 		chainID:    chainID,
-		client:     ethClient,
+		backend:    backend,
 	}
 
 	return &eth, nil
 }
 
-// NewSimulation provides an API for accessing an Ethereum node to perform blockchain
+// NewSimulated provides an API for accessing an Ethereum node to perform blockchain
 // related operations against the specified simulated backend and private key
 // that was registered by the CreateSimulation function.
-func NewSimulation(simBack *SimulatedBackend, pk *ecdsa.PrivateKey) *Ethereum {
+func NewSimulated(backend *SimulatedBackend, pk *ecdsa.PrivateKey) (*Ethereum, error) {
 	return &Ethereum{
-		network:    "simulation",
 		address:    crypto.PubkeyToAddress(pk.PublicKey),
 		privateKey: pk,
 		chainID:    big.NewInt(1337),
-		client:     simBack,
-	}
-}
-
-// Copy creates a new client connection copying the client's settings.
-func (eth *Ethereum) Copy(ctx context.Context) (*Ethereum, error) {
-	if _, isClient := eth.client.(*ethclient.Client); !isClient {
-		return eth, nil
-	}
-
-	return New(ctx, eth.network, eth.keyFile, eth.passPhrase)
+		backend:    backend,
+	}, nil
 }
 
 // =============================================================================
 
-// RawClient returns the raw ethereum client API.
-func (eth *Ethereum) RawClient() *ethclient.Client {
-	client, isClient := eth.client.(*ethclient.Client)
+// Copy creates a new client connection copying the client's settings.
+func (eth *Ethereum) Copy(ctx context.Context) (*Ethereum, error) {
+	backend, isClient := eth.backend.(*DialedBackend)
 	if !isClient {
-		return nil
+		return eth, nil
 	}
 
-	return client
-}
-
-// RawSimulation returns the raw ethereum simulated backend API.
-func (eth *Ethereum) RawSimulation() *backends.SimulatedBackend {
-	client, isSim := eth.client.(*backends.SimulatedBackend)
-	if !isSim {
-		return nil
+	newBackend, err := CreateDialedBackend(backend.network)
+	if err != nil {
+		return nil, err
 	}
 
-	return client
+	return NewDialed(ctx, newBackend, eth.keyFile, eth.passPhrase)
 }
+
+// =============================================================================
 
 // ContractBackend returns the client where a contract backend is needed.
 func (eth *Ethereum) ContractBackend() bind.ContractBackend {
-	return eth.client
+	return eth.backend
 }
 
 // DeployBackend returns the client where a deploy backend is needed.
 func (eth *Ethereum) DeployBackend() bind.DeployBackend {
-	return eth.client
+	return eth.backend
 }
 
 // Address returns the current address calculated from the private key.
 func (eth *Ethereum) Address() common.Address {
 	return eth.address
-}
-
-// Network returns the network information.
-func (eth *Ethereum) Network() string {
-	return eth.network
 }
 
 // ChainID returns the chain information for the connected network.
@@ -169,12 +143,12 @@ func (eth *Ethereum) NewCallOpts(ctx context.Context) (*bind.CallOpts, error) {
 // authorization data required to create a valid Ethereum transaction. If the
 // gasLimit is set to 0, an estimate will be made for the amount of gas needed.
 func (eth *Ethereum) NewTransactOpts(ctx context.Context, gasLimit uint64, valueGWei *big.Float) (*bind.TransactOpts, error) {
-	nonce, err := eth.client.PendingNonceAt(ctx, eth.address)
+	nonce, err := eth.backend.PendingNonceAt(ctx, eth.address)
 	if err != nil {
 		return nil, fmt.Errorf("retrieving next nonce: %w", err)
 	}
 
-	gasPrice, err := eth.client.SuggestGasPrice(ctx)
+	gasPrice, err := eth.backend.SuggestGasPrice(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("retrieving suggested gas price: %w", err)
 	}
@@ -198,7 +172,7 @@ func (eth *Ethereum) NewTransactOpts(ctx context.Context, gasLimit uint64, value
 
 // WaitMined will wait for the transaction to be minded and return a receipt.
 func (eth *Ethereum) WaitMined(ctx context.Context, tx *types.Transaction) (*types.Receipt, error) {
-	receipt, err := bind.WaitMined(ctx, eth.client, tx)
+	receipt, err := bind.WaitMined(ctx, eth.backend, tx)
 	if err != nil {
 		return nil, fmt.Errorf("waiting for tx to be mined: %w", err)
 	}
@@ -216,12 +190,12 @@ func (eth *Ethereum) WaitMined(ctx context.Context, tx *types.Transaction) (*typ
 // specified amount. The function will wait for the transaction to be mined
 // based on the timeout value specified in the context.
 func (eth *Ethereum) SendTransaction(ctx context.Context, address common.Address, value *big.Int, gasLimit uint64) error {
-	nonce, err := eth.client.PendingNonceAt(ctx, eth.address)
+	nonce, err := eth.backend.PendingNonceAt(ctx, eth.address)
 	if err != nil {
 		return fmt.Errorf("retrieving next nonce: %w", err)
 	}
 
-	gasPrice, err := eth.client.SuggestGasPrice(ctx)
+	gasPrice, err := eth.backend.SuggestGasPrice(ctx)
 	if err != nil {
 		return fmt.Errorf("retrieving suggested gas price: %w", err)
 	}
@@ -240,7 +214,7 @@ func (eth *Ethereum) SendTransaction(ctx context.Context, address common.Address
 		return fmt.Errorf("signing transaction: %w", err)
 	}
 
-	if err := eth.client.SendTransaction(ctx, signedTx); err != nil {
+	if err := eth.backend.SendTransaction(ctx, signedTx); err != nil {
 		return fmt.Errorf("signing transaction: %w", err)
 	}
 
@@ -255,12 +229,12 @@ func (eth *Ethereum) SendTransaction(ctx context.Context, address common.Address
 
 // TransactionByHash returns a transaction value for the specified transaction hash.
 func (eth *Ethereum) TransactionByHash(ctx context.Context, txHash common.Hash) (*types.Transaction, bool, error) {
-	return eth.client.TransactionByHash(ctx, txHash)
+	return eth.backend.TransactionByHash(ctx, txHash)
 }
 
 // TransactionReceipt returns a receipt value for the specified transaction hash.
 func (eth *Ethereum) TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error) {
-	return eth.client.TransactionReceipt(ctx, txHash)
+	return eth.backend.TransactionReceipt(ctx, txHash)
 }
 
 // Balance retrieves the current balance for the client account.
@@ -270,7 +244,7 @@ func (eth *Ethereum) Balance(ctx context.Context) (wei *big.Int, err error) {
 
 // BalanceAt retrieves the current balance for the specified account.
 func (eth *Ethereum) BalanceAt(ctx context.Context, address common.Address) (wei *big.Int, err error) {
-	client, isClient := eth.client.(*ethclient.Client)
+	client, isClient := eth.backend.(*ethclient.Client)
 	if !isClient {
 		return big.NewInt(0), errors.New("running simulated backend")
 	}
@@ -280,7 +254,7 @@ func (eth *Ethereum) BalanceAt(ctx context.Context, address common.Address) (wei
 
 // BaseFee calculates the base fee from the block for this receipt.
 func (eth *Ethereum) BaseFee(receipt *types.Receipt) (wei *big.Int) {
-	client, isClient := eth.client.(*ethclient.Client)
+	client, isClient := eth.backend.(*ethclient.Client)
 	if !isClient {
 		return big.NewInt(0)
 	}
@@ -306,6 +280,6 @@ func (eth *Ethereum) extractError(ctx context.Context, tx *types.Transaction) er
 		Data:     tx.Data(),
 	}
 
-	_, err := eth.client.CallContract(ctx, msg, nil)
+	_, err := eth.backend.CallContract(ctx, msg, nil)
 	return err
 }

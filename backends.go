@@ -12,19 +12,44 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-// SimulatedBackend represents an Ethereum node running for simulation purposes.
+// DialedBackend represents a dialied connection to an ethereum node.
+type DialedBackend struct {
+	*ethclient.Client
+	network string
+}
+
+// CreateDialedBackend constructs an ethereum client value for the specified
+// network and attempts to establish a connection.
+func CreateDialedBackend(network string) (*DialedBackend, error) {
+	client, err := ethclient.Dial(network)
+	if err != nil {
+		return nil, err
+	}
+
+	b := DialedBackend{
+		Client:  client,
+		network: network,
+	}
+
+	return &b, nil
+}
+
+// =============================================================================
+
+// SimulatedBackend represents a simulated connection to an ethereum node.
 type SimulatedBackend struct {
 	*backends.SimulatedBackend
 	AutoCommit  bool
 	PrivateKeys []*ecdsa.PrivateKey
 }
 
-// CreateSimulation constructs a simulated backend and a set of private keys
+// CreateSimBackend constructs a simulated backend and a set of private keys
 // registered to the backend with a balance of 100 ETH. Use these private keys
 // with the NewSimulation call to get an Ethereum API value.
-func CreateSimulation(numAccounts int, autoCommit bool) (*SimulatedBackend, error) {
+func CreateSimBackend(numAccounts int, autoCommit bool) (*SimulatedBackend, error) {
 	keys := make([]*ecdsa.PrivateKey, numAccounts)
 	alloc := make(core.GenesisAlloc)
 
@@ -45,24 +70,24 @@ func CreateSimulation(numAccounts int, autoCommit bool) (*SimulatedBackend, erro
 	client.AdjustTime(365 * 24 * time.Hour)
 	client.Commit()
 
-	sb := SimulatedBackend{
+	b := SimulatedBackend{
 		SimulatedBackend: client,
 		AutoCommit:       autoCommit,
 		PrivateKeys:      keys,
 	}
 
-	return &sb, nil
+	return &b, nil
 }
 
 // SendTransaction functions pipes its parameters to the embedded backend and
 // also calls Commit() if sb.AutoCommit==true.
-func (sb *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	if err := sb.SimulatedBackend.SendTransaction(ctx, tx); err != nil {
+func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
+	if err := b.SimulatedBackend.SendTransaction(ctx, tx); err != nil {
 		return err
 	}
 
-	if sb.AutoCommit {
-		sb.Commit()
+	if b.AutoCommit {
+		b.Commit()
 	}
 
 	return nil

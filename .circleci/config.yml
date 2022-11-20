@@ -14,17 +14,15 @@ jobs:
               which go
               go version
       - run:
-          name: Install staticheck
-          environment:
-              GOPATH: $HOME/go
+          name: Run staticheck
           command: |
               go install honnef.co/go/tools/cmd/staticcheck@latest
-              $HOME/go/bin/staticcheck -checks=all ./...
+              staticcheck -checks=all ./...
       - run:
-          name: Install govulncheck
+          name: Run govulncheck
           command: |
               go install golang.org/x/vuln/cmd/govulncheck@latest
-              $HOME/go/bin/govulncheck ./...
+              govulncheck ./...
       - run:
           name: Run vet
           command: |
@@ -33,11 +31,3 @@ jobs:
           name: Run tests
           command: |
               go test ./...
-      - run:
-          name: Run staticcheck
-          command: |
-              $HOME/go/bin/staticcheck -checks=all ./...
-      - run:
-          name: Run govulncheck
-          command: |
-              $HOME/go/bin/govulncheck ./...

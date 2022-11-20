@@ -85,7 +85,7 @@ func CreateSimulatedBackend(numAccounts int, autoCommit bool, accountBalance *bi
 		}
 	}
 
-	epoch := time.Date(1970, time.January, 1, 0, 0, 0, 0, time.UTC)
+	epoch := time.Date(1970, time.January, 1, 0, 0, 0, 0, time.Local)
 	maxLimit := uint64(9223372036854775807)
 
 	client := backends.NewSimulatedBackend(alloc, maxLimit)

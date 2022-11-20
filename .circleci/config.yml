@@ -14,17 +14,26 @@ jobs:
               which go
               go version
       - run:
+          name: Install staticheck
+          command: |
+              go install honnef.co/go/tools/cmd/staticcheck@latest
+      - run:
+          name: Install govulncheck
+          command: |
+              go install golang.org/x/vuln/cmd/govulncheck@latest
+      - run:
           name: Run vet
           command: |
               go vet ./...
       - run:
-          name: Run staticheck
-          command: |
-              wget -O staticcheck.tgz https://github.com/dominikh/go-tools/releases/download/v0.3.3/staticcheck_linux_amd64.tar.gz
-              sudo tar -xzf staticcheck.tgz
-              ./staticcheck/staticcheck --version
-              ./staticcheck/staticcheck -checks=all ./...
-      - run:
           name: Run tests
           command: |
               go test ./...
+      - run:
+          name: Run staticcheck
+          command: |
+              /usr/local/go/bin/staticcheck/staticcheck -checks=all ./...
+      - run:
+          name: Run govulncheck
+          command: |
+              /usr/local/go/bin/govulncheck ./...

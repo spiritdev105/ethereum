@@ -19,15 +19,15 @@ jobs:
           command: |
               go mod download
       - run:
+          name: Run tests
+          command: |
+              CGO_ENABLED=0 go test ./...
+      - run:
+          name: Run vet
+          command: |
+              CGO_ENABLED=0 go vet ./...
+      - run:
           name: Run staticheck
           command: |
               go install honnef.co/go/tools/cmd/staticcheck@latest
               staticcheck -checks=all ./...
-      - run:
-          name: Run vet
-          command: |
-              go vet ./...
-      - run:
-          name: Run tests
-          command: |
-              go test ./...

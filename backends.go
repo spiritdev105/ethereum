@@ -121,7 +121,7 @@ func (b *SimulatedBackend) ChainID() *big.Int {
 // SendTransaction functions pipes its parameters to the embedded backend and
 // also calls Commit() if sb.AutoCommit==true.
 func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	if err := b.SendTransaction(ctx, tx); err != nil {
+	if err := b.Client.SendTransaction(ctx, tx); err != nil {
 		return err
 	}
 

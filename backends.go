@@ -58,6 +58,7 @@ func (b *DialedBackend) ChainID() *big.Int {
 
 // SimulatedBackend represents a simulated connection to an ethereum node.
 type SimulatedBackend struct {
+	simulated.Client
 	*simulated.Backend
 	AutoCommit  bool
 	PrivateKeys []*ecdsa.PrivateKey
@@ -96,6 +97,7 @@ func CreateSimulatedBackend(numAccounts int, autoCommit bool, accountBalance *bi
 	backend.Commit()
 
 	b := SimulatedBackend{
+		Client:      backend.Client(),
 		Backend:     backend,
 		AutoCommit:  autoCommit,
 		PrivateKeys: keys,
@@ -119,7 +121,7 @@ func (b *SimulatedBackend) ChainID() *big.Int {
 // SendTransaction functions pipes its parameters to the embedded backend and
 // also calls Commit() if sb.AutoCommit==true.
 func (b *SimulatedBackend) SendTransaction(ctx context.Context, tx *types.Transaction) error {
-	if err := b.Backend.Client().SendTransaction(ctx, tx); err != nil {
+	if err := b.SendTransaction(ctx, tx); err != nil {
 		return err
 	}
 

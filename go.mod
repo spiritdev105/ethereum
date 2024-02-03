@@ -1,6 +1,6 @@
 module github.com/ardanlabs/ethereum
 
-go 1.18
+go 1.20
 
 require (
 	github.com/DeOne4eg/eth-unit-converter v0.2.0
